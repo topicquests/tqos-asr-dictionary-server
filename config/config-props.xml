@@ -1,0 +1,22 @@
+<?xml version="1.0" ?>
+<!-- 
+	tqos-tqos-asr-dictionary server properties
+-->
+
+<properties>
+	<parameter name="ServerURL" value="localhost" />  <!--  ??? CHANGEME -->
+	<parameter name="ServerPort" value="7878" /> <!-- ??? CHANGEME -->
+
+	<!-- used in Stopper and StopperListener -->
+	<parameter name="StopperPort" value="8999" /> <!-- ??? CHANGEME -->
+	
+	<!-- where the dictionary is be stored;
+		this file should not be shared with other agents -->
+	<parameter name="WordDictionaryPath" value="data/dictionary.json" />
+
+	<!-- many different clients can use the same code,
+		typically a gigantic UJID -->
+	<parameter name="ClientId" value="changeme" />
+
+</properties>
+
