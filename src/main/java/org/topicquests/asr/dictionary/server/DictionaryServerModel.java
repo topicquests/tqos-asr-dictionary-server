@@ -1,15 +1,25 @@
 /**
- * 
+ * Copyright 2019, TopicQuests Foundation
+ *  This source code is available under the terms of the Affero General Public License v3.
+ *  Please see LICENSE.txt for full license terms, including the availability of proprietary exceptions.
  */
 package org.topicquests.asr.dictionary.server;
 
+import org.topicquests.os.asr.api.IStatisticsClient;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.topicquests.asr.dictionary.DictionaryServerEnvironment;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
+import org.topicquests.os.asr.common.api.IASRFields;
 import org.topicquests.support.ResultPojo;
 import org.topicquests.support.api.IResult;
 import org.topicquests.util.JSONUtil;
 
 import net.minidev.json.JSONObject;
+import net.minidev.json.parser.JSONParser;
 
 /**
  * @author jackpark
@@ -19,6 +29,7 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	private DictionaryServerEnvironment environment;
 	private JSONObject dictionary;
 	private JSONUtil util;
+	private IStatisticsClient stats;
 	private long nextNumber = 0;
 	private long wordCount = 0;
 	private final String clientId;
@@ -36,10 +47,26 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	 */
 	public DictionaryServerModel(DictionaryServerEnvironment env) throws Exception {
 		environment = env;
+		stats = environment.getStats();
 		clientId = environment.getStringProperty("ClientId");
 		util = new JSONUtil();
 		bootDictionary();
 		environment.logDebug("BootingDictionary");
+		//schedule hourly data snapshot
+		//https://stackoverflow.com/questions/32228345/run-java-function-every-hour
+		ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
+		ses.scheduleAtFixedRate(new Runnable() {
+		    @Override
+		    public void run() {
+		        //snapshot the data
+		        try { 
+		        	saveDictionary();
+		        } catch (Exception e) {
+		        	environment.logError(e.getMessage(), e);
+		        }
+		    }
+		}, 0, 1, TimeUnit.HOURS);
+
 	}
 
 	void bootDictionary() throws Exception {
@@ -115,11 +142,7 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 			result.put(IDictionaryServerModel.IS_NEW_WORD, false);
 		} else {
 			this.wordCount++;
-///////////////
-// This project is going to get a simple HttpClient to communicate
-// with tqos-asr-statistics-server
-//////////////
-//TODO			environment.getStats().addDictionaryWord();
+			stats.addToKey(IASRFields.WORDS_NEW);
 			wordId = newNumericId();
 			JSONObject words = getWords();
 			//put whole word
@@ -177,6 +200,21 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 			} else if (verb.equals(IDictionaryServerModel.GET_DICTIONARY)) {
 				synchronized(dictionary) {
 					updateCounts();
+					JSONParser p = new JSONParser(JSONParser.MODE_JSON_SIMPLE);
+					JSONObject d = new JSONObject();
+					synchronized(dictionary) {
+						try {
+							// clone data
+							d = (JSONObject)p.parse(dictionary.toJSONString());
+						
+						} catch (Exception e) {
+							environment.logError(e.getMessage(), e);
+							e.printStackTrace();
+							d.put(IDictionaryServerModel.ERROR, e.getMessage());
+						}
+					}
+					jo = d;
+
 				}
 				jo = dictionary;
 			} else if (verb.equals(IDictionaryServerModel.TEST))  {

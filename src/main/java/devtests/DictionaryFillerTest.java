@@ -1,5 +1,7 @@
 /**
- * 
+ * Copyright 2019, TopicQuests Foundation
+ *  This source code is available under the terms of the Affero General Public License v3.
+ *  Please see LICENSE.txt for full license terms, including the availability of proprietary exceptions.
  */
 package devtests;
 
@@ -14,6 +16,7 @@ import org.topicquests.support.api.IResult;
  */
 public class DictionaryFillerTest {
 	private SimpleHttpClient client;
+	//port must correspond to what's in the config-prope.xml
 	private final String URL = "http://localhost:7878/";
 	private StringBuilder buf;
 	/**
@@ -26,8 +29,8 @@ public class DictionaryFillerTest {
 		IResult r;
 		long st = System.currentTimeMillis();
 		try {
-			for(int i=0;i<1000;i++) {
-				for(int j=0;j< 1000;j++) {
+			for(int i=0;i<10;i++) {
+				for(int j=0;j< 10;j++) {
 					buf.append("{\"verb\":\"addWord\",\"word\":\"");
 					word = "AbC"+i+"-"+j; // the word
 					buf.append(word);

@@ -1,5 +1,7 @@
 /**
- * 
+ * Copyright 2019, TopicQuests Foundation
+ *  This source code is available under the terms of the Affero General Public License v3.
+ *  Please see LICENSE.txt for full license terms, including the availability of proprietary exceptions.
  */
 package org.topicquests.asr.dictionary;
 import java.io.File;
@@ -33,10 +35,6 @@ public class Main {
 	 */
 	public Main() {
 		environment = new DictionaryServerEnvironment();		
-		File f = new File("");
-		String p = f.getAbsolutePath();
-		String basePath = p+"/webapps/ROOT/";
-		environment.logDebug("MAIN.BASEPATH "+basePath);
 		//////////////////////
 		// Create the server
 		// ideas from http://stackoverflow.com/questions/28190198/cross-origin-filter-with-embedded-jetty
