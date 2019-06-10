@@ -74,13 +74,13 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 		String path = environment.getStringProperty("WordDictionaryPath");
 		dictionary = util.load(path);
 		if (dictionary.isEmpty()) {
-			dictionary = new JSONObject();
 			dictionary.put(WORDS, new JSONObject());
 			dictionary.put(IDS, new JSONObject());
 			dictionary.put(WORD_COUNT, "1");
 			dictionary.put(NUMBER, "1");
 			wordCount = 1L;
 			nextNumber = 1L;
+			environment.logDebug("BootNewDictionary- "+dictionary);
 		} else {
 			String y = dictionary.getAsString(WORD_COUNT);
 			long x = 0;
@@ -97,7 +97,7 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 				nextNumber = 1L;
 			
 		}
-		environment.logDebug("SavingDictionary "+wordCount+" "+nextNumber);
+		environment.logDebug("BootDictionary "+wordCount+" "+nextNumber);
 		isDirty = false;
 	}
 	
@@ -134,14 +134,16 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	 * @return
 	 */
 	private JSONObject addWord(String word) {
+		environment.logDebug("DictServerModel.addWord- "+word);
 		JSONObject result = new JSONObject();
 		String theWord = word.toLowerCase();
 		//always look for Id with
 		String wordId = null;
 		if (theWord.equals("\""))
-			getWordId("\"");
+			wordId = "0"; // reserved
 		else
-			getWordId(theWord);
+			wordId = getWordId(theWord);
+		environment.logDebug("DictServerModel.addWord-1 "+wordId);
 		if (wordId != null)	 {
 			result.put(IDictionaryServerModel.CARGO, wordId);
 			result.put(IDictionaryServerModel.IS_NEW_WORD, false);
@@ -149,14 +151,17 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 			this.wordCount++;
 			stats.addToKey(IASRFields.WORDS_NEW);
 			wordId = newNumericId();
-			JSONObject words = getWords();
-			//put whole word
-			words.put(wordId, word);
-			words = getIDs(); //reuse variable
-			//put //put lowercase version
-			words.put(theWord, wordId);		
+			synchronized(dictionary) {
+				JSONObject words = getWords();
+				//put whole word
+				words.put(wordId, word);
+				words = getIDs(); //reuse variable
+				//put //put lowercase version
+				words.put(theWord, wordId);	
+			}
 			result.put(IDictionaryServerModel.CARGO, wordId);
 			result.put(IDictionaryServerModel.IS_NEW_WORD, true);
+			environment.logDebug("DictServerModel.addWord-2 "+result);
 			isDirty = true;
 		}
 		return result;
@@ -191,15 +196,17 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	public IResult handleRequest(JSONObject request) {
 		IResult result = new ResultPojo();
 		JSONObject jo = new JSONObject(); // empty default
-		environment.logDebug("DictionaryServerModel.handleNewRequest "+request);
+		result.setResultObject(jo);
+		environment.logDebug("DictionaryServerModel.handleNewRequest- "+request);
 		String verb = request.getAsString(IDictionaryServerModel.VERB);
 		String clientIx = request.getAsString(IDictionaryServerModel.CLIENT_ID);
 		String x;
 		if (clientIx.equals(clientId)) {
 			if (verb.equals(IDictionaryServerModel.GET_WORD_ID) ||
-				verb.equals(IDictionaryServerModel.ADD_WORD))
+				verb.equals(IDictionaryServerModel.ADD_WORD)) {
 				jo = getWordId(request);
-			else if (verb.equals(IDictionaryServerModel.GET_WORD)) {
+				environment.logDebug("DictionaryServerModel.handleNewRequest-1 "+jo);
+			} else if (verb.equals(IDictionaryServerModel.GET_WORD)) {
 				x = getWordById(request);
 				jo.put(IDictionaryServerModel.CARGO, x);
 			} else if (verb.equals(IDictionaryServerModel.GET_DICTIONARY)) {
@@ -223,16 +230,16 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 				}
 				jo = dictionary;
 			} else if (verb.equals(IDictionaryServerModel.TEST))  {
-				jo = new JSONObject();
 				jo.put(IDictionaryServerModel.CARGO, "Yup");
 			} else {
-				jo = new JSONObject();
 				jo.put(IDictionaryServerModel.ERROR, "BAD VERB: "+verb);
 			}
 		} else {
 			jo.put(IDictionaryServerModel.ERROR, "Invalid Client");
 		}
+		environment.logDebug("DictionaryServerModel.handleNewRequest+ "+jo);
 		result.setResultObject(jo);
+		environment.logDebug("DictionaryServerModel.handleNewRequest++ "+result.getResultObject());;
 
 		return result;
 	}
@@ -261,7 +268,7 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 		if (theWord.equals("\""))
 			result = addWord("\"");
 		else
-			addWord(theWord);
+			result = addWord(theWord);
 		System.out.println("DictionaryServerModel.getWordId "+theWord+" "+result);
 		return result;
 	}
