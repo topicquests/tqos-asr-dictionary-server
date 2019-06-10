@@ -30,8 +30,9 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	private JSONObject dictionary;
 	private JSONUtil util;
 	private IStatisticsClient stats;
-	private long nextNumber = 0;
-	private long wordCount = 0;
+	//We reserve 0 for the quote character, taken care of at the client
+	private long nextNumber = 1;
+	private long wordCount = 1;
 	private final String clientId;
 	private boolean isDirty = false;
 	private final String 
@@ -76,10 +77,10 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 			dictionary = new JSONObject();
 			dictionary.put(WORDS, new JSONObject());
 			dictionary.put(IDS, new JSONObject());
-			dictionary.put(WORD_COUNT, "0");
-			dictionary.put(NUMBER, "0");
-			wordCount = 0L;
-			nextNumber = 0L;
+			dictionary.put(WORD_COUNT, "1");
+			dictionary.put(NUMBER, "1");
+			wordCount = 1L;
+			nextNumber = 1L;
 		} else {
 			String y = dictionary.getAsString(WORD_COUNT);
 			long x = 0;
@@ -87,13 +88,13 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 				x = Long.parseLong(y);
 				wordCount = x;
 			} else
-				wordCount = 0L;
+				wordCount = 1L;
 			y = dictionary.getAsString(NUMBER);
 			if (y != null) {
 				x = Long.parseLong(y);
 				nextNumber = x;
 			} else
-				nextNumber = 0L;
+				nextNumber = 1L;
 			
 		}
 		environment.logDebug("SavingDictionary "+wordCount+" "+nextNumber);
@@ -136,7 +137,11 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 		JSONObject result = new JSONObject();
 		String theWord = word.toLowerCase();
 		//always look for Id with
-		String wordId = getWordId(theWord);
+		String wordId = null;
+		if (theWord.equals("\""))
+			getWordId("\"");
+		else
+			getWordId(theWord);
 		if (wordId != null)	 {
 			result.put(IDictionaryServerModel.CARGO, wordId);
 			result.put(IDictionaryServerModel.IS_NEW_WORD, false);
@@ -252,7 +257,11 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	
 	JSONObject getWordId(JSONObject jo) {
 		String theWord = jo.getAsString(IDictionaryServerModel.WORD);
-		JSONObject result = addWord(theWord);
+		JSONObject result = null;
+		if (theWord.equals("\""))
+			result = addWord("\"");
+		else
+			addWord(theWord);
 		System.out.println("DictionaryServerModel.getWordId "+theWord+" "+result);
 		return result;
 	}
