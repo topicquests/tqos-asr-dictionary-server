@@ -7,19 +7,14 @@ package org.topicquests.asr.dictionary.server;
 
 import org.topicquests.os.asr.api.IStatisticsClient;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import org.topicquests.asr.dictionary.DictionaryServerEnvironment;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
+import org.topicquests.asr.dictionary.server.api.IPersistentDictionary;
 import org.topicquests.os.asr.common.api.IASRFields;
 import org.topicquests.support.ResultPojo;
 import org.topicquests.support.api.IResult;
-import org.topicquests.util.JSONUtil;
 
 import net.minidev.json.JSONObject;
-import net.minidev.json.parser.JSONParser;
 
 /**
  * @author jackpark
@@ -27,8 +22,7 @@ import net.minidev.json.parser.JSONParser;
  */
 public class DictionaryServerModel implements IDictionaryServerModel {
 	private DictionaryServerEnvironment environment;
-	private JSONObject dictionary;
-	private JSONUtil util;
+	private IPersistentDictionary dictionary;
 	private IStatisticsClient stats;
 	//We reserve 0 for the quote character, taken care of at the client
 	private long nextNumber = 1;
@@ -39,84 +33,25 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 		WORDS 		= "words",
 		//an index of words, returning their id values
 		IDS			= "ids",
-		NUMBER		= "number",
+		NUMBER		= "_DictionaryNumber",
 		SIZE		= "size",
-		WORD_COUNT	= "wordCount"; //,
+		WORD_COUNT	= "_DictionaryWordCount"; //,
 
 	/**
 	 * 
 	 */
-	public DictionaryServerModel(DictionaryServerEnvironment env) throws Exception {
+	public DictionaryServerModel(DictionaryServerEnvironment env, IPersistentDictionary d)  {
 		environment = env;
+		dictionary = d;
 		stats = environment.getStats();
 		clientId = environment.getStringProperty("ClientId");
-		util = new JSONUtil();
-		bootDictionary();
 		environment.logDebug("BootingDictionary");
-		//schedule hourly data snapshot
-		//https://stackoverflow.com/questions/32228345/run-java-function-every-hour
-		ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
-		ses.scheduleAtFixedRate(new Runnable() {
-		    @Override
-		    public void run() {
-		        //snapshot the data
-		        try { 
-		        	saveDictionary();
-		        } catch (Exception e) {
-		        	environment.logError(e.getMessage(), e);
-		        }
-		    }
-		}, 0, 1, TimeUnit.HOURS);
 
-	}
-
-	void bootDictionary() throws Exception {
-		String path = environment.getStringProperty("WordDictionaryPath");
-		dictionary = util.load(path);
-		if (dictionary.isEmpty()) {
-			dictionary.put(WORDS, new JSONObject());
-			dictionary.put(IDS, new JSONObject());
-			dictionary.put(WORD_COUNT, "1");
-			dictionary.put(NUMBER, "1");
-			wordCount = 1L;
-			nextNumber = 1L;
-			environment.logDebug("BootNewDictionary- "+dictionary);
-		} else {
-			String y = dictionary.getAsString(WORD_COUNT);
-			long x = 0;
-			if (y != null) {
-				x = Long.parseLong(y);
-				wordCount = x;
-			} else
-				wordCount = 1L;
-			y = dictionary.getAsString(NUMBER);
-			if (y != null) {
-				x = Long.parseLong(y);
-				nextNumber = x;
-			} else
-				nextNumber = 1L;
-			
-		}
-		environment.logDebug("BootDictionary "+wordCount+" "+nextNumber);
-		isDirty = false;
-	}
-	
-	public void saveDictionary() throws Exception {
-		environment.logDebug("SavingDictionary "+isDirty+" "+wordCount+" "+nextNumber);
-		if (isDirty) {
-			synchronized(dictionary) {
-				System.out.println("SavingDict "+wordCount+" "+nextNumber);
-				updateCounts();
-				String path = environment.getStringProperty("WordDictionaryPath");
-				util.save(path, dictionary);
-			}
-			isDirty = false;
-		}
 	}
 
 	void updateCounts() {
-		dictionary.put(WORD_COUNT, Long.toString(wordCount));
-		dictionary.put(NUMBER, Long.toString(nextNumber));		
+		dictionary.addWord(WORD_COUNT, wordCount);
+		dictionary.addWord(NUMBER, nextNumber);		
 	}
 
 	/////////////////////////
@@ -151,14 +86,8 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 			this.wordCount++;
 			stats.addToKey(IASRFields.WORDS_NEW);
 			wordId = newNumericId();
-			synchronized(dictionary) {
-				JSONObject words = getWords();
-				//put whole word
-				words.put(wordId, word);
-				words = getIDs(); //reuse variable
-				//put //put lowercase version
-				words.put(theWord, wordId);	
-			}
+			long ix = Long.parseLong(wordId);
+			dictionary.addNewWord(word, ix);
 			result.put(IDictionaryServerModel.CARGO, wordId);
 			result.put(IDictionaryServerModel.IS_NEW_WORD, true);
 			environment.logDebug("DictServerModel.addWord-2 "+result);
@@ -177,19 +106,18 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 	
 	String getWordId(String word) {
 		//This tests for the word and, if necessary, its lowercase version
-		synchronized(dictionary) {
-			JSONObject ids = getIDs();
-			String result = (String)ids.get(word);
-			if (result == null) {
+		String result = null;
+		long ix = dictionary.getWordId(word);
+		if (ix != -1) {
 				//does this word have caps?
 				String lc = word.toLowerCase();
 				if (!lc.equals(word)) {
-					//see if it exists as lowercase
-					result = (String)ids.get(lc);
+					ix = dictionary.getWordId(lc);				
 				}
-			}
-			return result;
 		}
+		if (ix != -1)
+			result = Long.toString(ix);
+		return result;
 	}
 	
 	@Override
@@ -210,25 +138,7 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 				x = getWordById(request);
 				jo.put(IDictionaryServerModel.CARGO, x);
 			} else if (verb.equals(IDictionaryServerModel.GET_DICTIONARY)) {
-				synchronized(dictionary) {
-					updateCounts();
-					JSONParser p = new JSONParser(JSONParser.MODE_JSON_SIMPLE);
-					JSONObject d = new JSONObject();
-					synchronized(dictionary) {
-						try {
-							// clone data
-							d = (JSONObject)p.parse(dictionary.toJSONString());
-						
-						} catch (Exception e) {
-							environment.logError(e.getMessage(), e);
-							e.printStackTrace();
-							d.put(IDictionaryServerModel.ERROR, e.getMessage());
-						}
-					}
-					jo = d;
-
-				}
-				jo = dictionary;
+				//WE DON'T DO THIS
 			} else if (verb.equals(IDictionaryServerModel.TEST))  {
 				jo.put(IDictionaryServerModel.CARGO, "Yup");
 			} else {
@@ -244,22 +154,12 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 		return result;
 	}
 
-	JSONObject getWords() {
-		return (JSONObject)dictionary.get(WORDS);
-	}
-
-	JSONObject getIDs() {
-		return (JSONObject)dictionary.get(IDS);
-	}
 
 	String getWordById(JSONObject jo) {
 		//theWord is wordId
-		String result = null;
-		synchronized(dictionary) {
-			String theWord = jo.getAsString(IDictionaryServerModel.WORD);
-			result = getWords().getAsString(theWord);
-		}
-		return result;
+			String id = jo.getAsString(IDictionaryServerModel.WORD);
+			long ix = Long.parseLong(id);
+			return dictionary.getWordById(ix);
 	}
 	
 	JSONObject getWordId(JSONObject jo) {
@@ -271,6 +171,12 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 			result = addWord(theWord);
 		System.out.println("DictionaryServerModel.getWordId "+theWord+" "+result);
 		return result;
+	}
+
+	@Override
+	public void shutDown() {
+		System.out.println("DictionaryModel shutting down");
+		dictionary.shutDown();
 	}
 	
 

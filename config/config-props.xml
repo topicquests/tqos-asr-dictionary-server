@@ -9,10 +9,15 @@
 
 	<!-- used in Stopper and StopperListener -->
 	<parameter name="StopperPort" value="8999" /> <!-- ??? CHANGEME -->
+
+	<parameter name="WordMapDictionaryPath" value="data/worddictionary" />
+	<parameter name="WordMapDictionaryName" value="words" />
+	<parameter name="IdMapDictionaryPath" value="data/iddictionary" />
+	<parameter name="IdMapDictionaryName" value="identies" />
 	
 	<!-- where the dictionary is be stored;
-		this file should not be shared with other agents -->
-	<parameter name="WordDictionaryPath" value="data/dictionary.json" />
+		this file should not be shared with other agents 
+	<parameter name="WordDictionaryPath" value="data/dictionary.json" />-->
 
 	<!-- many different clients can use the same code,
 		typically a gigantic UJID -->

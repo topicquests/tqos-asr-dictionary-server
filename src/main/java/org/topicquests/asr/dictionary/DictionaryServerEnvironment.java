@@ -9,6 +9,7 @@ import org.topicquests.os.asr.StatisticsHttpClient;
 import org.topicquests.os.asr.api.IStatisticsClient;
 import org.topicquests.asr.dictionary.server.DictionaryServerModel;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
+import org.topicquests.asr.dictionary.server.api.IPersistentDictionary;
 import org.topicquests.support.RootEnvironment;
 
 /**
@@ -17,6 +18,7 @@ import org.topicquests.support.RootEnvironment;
  */
 public class DictionaryServerEnvironment extends RootEnvironment {
 	private boolean isShutDown = false;
+	private IPersistentDictionary dictionary;
 	private IDictionaryServerModel model;
 	private StopperListener stopper;
 	private IStatisticsClient stats;
@@ -28,14 +30,9 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 		stats = new StatisticsHttpClient(this);
 		stopper = new StopperListener(this);
 		isShutDown = false;
-        try {
-        	model = new DictionaryServerModel(this);
-        	logDebug("Environment "+model);
-        } catch (Exception e) {
-        	logError(e.getMessage(), e);
-        	throw new RuntimeException(e);
-        }
-        System.out.println("ENV-1 "+model);
+		dictionary = new PersistentDictionary(this);
+        model = new DictionaryServerModel(this, dictionary);
+         System.out.println("ENV-1 "+model);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			
@@ -45,6 +42,10 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 			}
 		});
 
+	}
+	
+	public IPersistentDictionary getDictionary() {
+		return dictionary;
 	}
 	
 	public IStatisticsClient getStats() {
@@ -61,13 +62,7 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 		if (!isShutDown) {
 			isShutDown = true;
 			System.out.println("DictionaryServerEnvironment.shutDown");
-			try {
-				model.saveDictionary();
-				logDebug("DictionaryServerEnvironment.shutDown");
-			} catch (Exception e) {
-				logError(e.getMessage(), e);
-				e.printStackTrace();
-			}
+			model.shutDown();
 		}
 	}
 
