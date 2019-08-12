@@ -65,7 +65,7 @@ public class DictionaryServletHandler extends HttpServlet {
 
 	public DictionaryServletHandler(DictionaryServerEnvironment env) {
 		environment = env;
-		model = environment.getModel();
+		model = environment.getPostgresModel(); //getModel();
 		environment.logDebug("BootingServletHandler "+model);
 	}
 	

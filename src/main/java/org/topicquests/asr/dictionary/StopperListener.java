@@ -18,6 +18,7 @@ public class StopperListener {
 	private DictionaryServerEnvironment environment;
 	private final String serverName = "localhost";
 	private final int port;
+	private ServerSocket skt = null;
 
 	/**
 	 * 
@@ -25,20 +26,36 @@ public class StopperListener {
 	public StopperListener(DictionaryServerEnvironment env) {
 		environment = env;
 		String px = environment.getStringProperty("StopperPort");
+		System.out.println("PORT "+px);
 		port = Integer.parseInt(px);
 		new Worker().start();
 	}
 	class Worker extends Thread {
 		
 		public void run() {
-			ServerSocket skt = null;
+			
 			try {
 				skt = new ServerSocket(port);
-				skt.accept();
-				environment.shutDown();;
+				if (!skt.isClosed()) {
+					skt.accept();
+					environment.shutDown();
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		}
+	}
+	
+	public void shutDown() {
+		if (skt != null) {
+			try {
+				if (!skt.isClosed())
+					skt.close();
+			} catch (Exception e) {
+				environment.logError(e.getMessage(), e);
+				e.printStackTrace();
+			}
+			skt = null;
 		}
 	}
 

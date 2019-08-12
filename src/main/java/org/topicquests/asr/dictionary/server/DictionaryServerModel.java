@@ -8,9 +8,12 @@ package org.topicquests.asr.dictionary.server;
 import org.topicquests.os.asr.api.IStatisticsClient;
 
 import org.topicquests.asr.dictionary.DictionaryServerEnvironment;
+import org.topicquests.asr.dictionary.PostgresDictionary;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
 import org.topicquests.asr.dictionary.server.api.IPersistentDictionary;
 import org.topicquests.os.asr.common.api.IASRFields;
+import org.topicquests.pg.PostgresConnectionFactory;
+import org.topicquests.pg.api.IPostgresConnection;
 import org.topicquests.support.ResultPojo;
 import org.topicquests.support.api.IResult;
 
@@ -46,7 +49,6 @@ public class DictionaryServerModel implements IDictionaryServerModel {
 		stats = environment.getStats();
 		clientId = environment.getStringProperty("ClientId");
 		environment.logDebug("BootingDictionary");
-
 	}
 
 	void updateCounts() {

@@ -10,6 +10,7 @@ import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
 import org.topicquests.asr.dictionary.server.api.IPersistentDictionary;
+import org.topicquests.support.util.LRUCache;
 
 /**
  * @author jackpark
@@ -21,12 +22,16 @@ public class PersistentDictionary implements IPersistentDictionary {
 	private HTreeMap<String, Long> wordMap;
 	private HTreeMap<Long, String> idMap;
 	private boolean isClosed = false;
+	private LRUCache wordCache;
+	private LRUCache idCache;
 
 	/**
 	 * 
 	 */
 	public PersistentDictionary(DictionaryServerEnvironment env) {
 		environment = env;
+		wordCache = new LRUCache(8192);
+		idCache = new LRUCache(8192);
 		try {
 			openDB();
 			isClosed = false;
@@ -69,12 +74,25 @@ public class PersistentDictionary implements IPersistentDictionary {
 
 	@Override
 	public String getWordById(long id) {
+		String result = (String)idCache.get(id);
+		if (result != null)
+			return result;
+		else {
+			result = idMap.get(id);
+			if (result != null)
+				idCache.add(new Long(id), result);
+		}
 		return idMap.get(id);
 	}
 
 	@Override
 	public long getWordId(String word) {
-		Object x = wordMap.get(word);
+		Object x = wordCache.get(word);
+		if (x == null) {
+			x = wordMap.get(word);
+			if (x != null)
+				wordCache.add(word, x);
+		}
 		if (x == null)
 			return -1;
 		return ((Long)x).longValue(); 
@@ -82,6 +100,9 @@ public class PersistentDictionary implements IPersistentDictionary {
 
 	@Override
 	public void addWord(String word, long id) {
+		Long ix = new Long(id);
+		wordCache.add(word, ix);
+		idCache.add(ix, word);
 		wordMap.put(word, id);
 	}
 

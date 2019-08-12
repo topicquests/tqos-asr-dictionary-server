@@ -7,9 +7,12 @@ package org.topicquests.asr.dictionary;
 
 import org.topicquests.os.asr.StatisticsHttpClient;
 import org.topicquests.os.asr.api.IStatisticsClient;
+import org.topicquests.pg.PostgresConnectionFactory;
+import org.topicquests.asr.dictionary.server.DictionaryPostgresModel;
 import org.topicquests.asr.dictionary.server.DictionaryServerModel;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
 import org.topicquests.asr.dictionary.server.api.IPersistentDictionary;
+import org.topicquests.asr.dictionary.server.api.IPostgresDictionary;
 import org.topicquests.support.RootEnvironment;
 
 /**
@@ -18,9 +21,13 @@ import org.topicquests.support.RootEnvironment;
  */
 public class DictionaryServerEnvironment extends RootEnvironment {
 	private boolean isShutDown = false;
+	private PostgresConnectionFactory database = null;
+	private IPostgresDictionary pgDictionary;
+	private IDictionaryServerModel pgModel;
+
 	private IPersistentDictionary dictionary;
 	private IDictionaryServerModel model;
-	private StopperListener stopper;
+	//private StopperListener stopper;
 	private IStatisticsClient stats;
 	/**
 	 * 
@@ -28,11 +35,16 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 	public DictionaryServerEnvironment() {
 		super("config-props.xml", "logger.properties");
 		stats = new StatisticsHttpClient(this);
-		stopper = new StopperListener(this);
+		//stopper = new StopperListener(this);
+		String schemaName = getStringProperty("DatabaseSchema");
+		database = new PostgresConnectionFactory(getStringProperty("DatabaseName"),
+                schemaName);
 		isShutDown = false;
-		dictionary = new PersistentDictionary(this);
-        model = new DictionaryServerModel(this, dictionary);
-         System.out.println("ENV-1 "+model);
+		//dictionary = new PersistentDictionary(this);
+       // model = new DictionaryServerModel(this, dictionary);
+		pgDictionary = new PostgresDictionary(this);
+		pgModel = new DictionaryPostgresModel(this, pgDictionary);
+        System.out.println("ENV-1 "+model);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			
@@ -42,6 +54,17 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 			}
 		});
 
+	}
+	
+	public IDictionaryServerModel getPostgresModel() {
+		return pgModel;
+	}
+	public IPostgresDictionary getPostgresDictionary() {
+		return pgDictionary;
+	}
+	
+	public PostgresConnectionFactory getPostgresFactory() {
+		return database;
 	}
 	
 	public IPersistentDictionary getDictionary() {
@@ -62,7 +85,10 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 		if (!isShutDown) {
 			isShutDown = true;
 			System.out.println("DictionaryServerEnvironment.shutDown");
-			model.shutDown();
+			pgModel.shutDown();
+			//if (model != null)
+			//	model.shutDown();
+			//stopper.shutDown();
 		}
 	}
 
