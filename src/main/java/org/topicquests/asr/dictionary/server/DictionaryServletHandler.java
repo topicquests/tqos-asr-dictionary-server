@@ -65,13 +65,14 @@ public class DictionaryServletHandler extends HttpServlet {
 
 	public DictionaryServletHandler(DictionaryServerEnvironment env) {
 		environment = env;
-		model = environment.getPostgresModel(); //getModel();
+		model = environment.getPostgresModel();
 		environment.logDebug("BootingServletHandler "+model);
 	}
 	
 	public void executeGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		System.out.println("DSH-1 "+model);
-		IResult r = model.handleRequest(processRequest(request));
+		JSONObject x = processRequest(request);
+		environment.logDebug("DSH-1 "+x);
+		IResult r = model.handleRequest(x);
 		JSONObject jo = (JSONObject)r.getResultObject();
 		//Two cases:
 		environment.logDebug("DictServer.executeGet "+jo);

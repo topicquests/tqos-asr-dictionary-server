@@ -37,6 +37,7 @@ public interface IDictionaryServerModel {
 	 * @return
 	 */
 	IResult handleRequest(JSONObject request);
-
+	
+	
 	void shutDown();
 }

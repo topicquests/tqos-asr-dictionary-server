@@ -9,9 +9,7 @@ import org.topicquests.os.asr.StatisticsHttpClient;
 import org.topicquests.os.asr.api.IStatisticsClient;
 import org.topicquests.pg.PostgresConnectionFactory;
 import org.topicquests.asr.dictionary.server.DictionaryPostgresModel;
-import org.topicquests.asr.dictionary.server.DictionaryServerModel;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
-import org.topicquests.asr.dictionary.server.api.IPersistentDictionary;
 import org.topicquests.asr.dictionary.server.api.IPostgresDictionary;
 import org.topicquests.support.RootEnvironment;
 
@@ -25,9 +23,6 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 	private IPostgresDictionary pgDictionary;
 	private IDictionaryServerModel pgModel;
 
-	private IPersistentDictionary dictionary;
-	private IDictionaryServerModel model;
-	//private StopperListener stopper;
 	private IStatisticsClient stats;
 	/**
 	 * 
@@ -35,16 +30,13 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 	public DictionaryServerEnvironment() {
 		super("config-props.xml", "logger.properties");
 		stats = new StatisticsHttpClient(this);
-		//stopper = new StopperListener(this);
 		String schemaName = getStringProperty("DatabaseSchema");
 		database = new PostgresConnectionFactory(getStringProperty("DatabaseName"),
                 schemaName);
 		isShutDown = false;
-		//dictionary = new PersistentDictionary(this);
-       // model = new DictionaryServerModel(this, dictionary);
 		pgDictionary = new PostgresDictionary(this);
 		pgModel = new DictionaryPostgresModel(this, pgDictionary);
-        System.out.println("ENV-1 "+model);
+       // System.out.println("ENV-1 "+model);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			
@@ -67,18 +59,18 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 		return database;
 	}
 	
-	public IPersistentDictionary getDictionary() {
+	/*public IPersistentDictionary getDictionary() {
 		return dictionary;
-	}
+	}*/
 	
 	public IStatisticsClient getStats() {
 		return stats;
 	}
 	
-	public IDictionaryServerModel getModel() {
+	/*public IDictionaryServerModel getModel() {
 		logDebug("GetModel");
 		return model;
-	}
+	}*/
 		
 	public void shutDown() {
 		logDebug("DictionaryServerEnvironment.shutDown "+isShutDown);

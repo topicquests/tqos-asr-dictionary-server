@@ -14,7 +14,7 @@ $do$;
 -- Create a schema to hide the proxy tables from public view.
 --
 CREATE SCHEMA IF NOT EXISTS tqos_dictionary;
-GRANT ALL PRIVILEGES ON tqos_dictionary TO tq_proxy;
+GRANT ALL PRIVILEGES ON SCHEMA tqos_dictionary TO tq_proxy;
 
 CREATE TABLE IF NOT EXISTS 
 tqos_dictionary.dictionary (
