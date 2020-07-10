@@ -5,8 +5,8 @@
 
 <properties>
 	<!-- dictionary postgres -->
-	<parameter name="DatabaseName" value = "testdictionary" />
-	<parameter name="DatabaseSchema" value = "tqos_dictionary" />
+	<parameter name="DictionaryDatabaseName" value = "testdictionary" />
+	<parameter name="DictionaryDatabaseSchema" value = "tqos_dictionary" />
 	<parameter name="ClientCacheSize" value = "8192" />
 
 
