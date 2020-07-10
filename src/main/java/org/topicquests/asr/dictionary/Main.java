@@ -42,6 +42,7 @@ public class Main {
 		//////////////////////
 		int port = Integer.valueOf(environment.getStringProperty("ServerPort")).intValue();
 		Server server = new Server(port);
+		server.setStopAtShutdown(true);
 		environment.logDebug("MAIN.SERVER");
 		ServletHandler handler = new ServletHandler();
         FilterHolder holder = new FilterHolder(new CrossOriginFilter());
