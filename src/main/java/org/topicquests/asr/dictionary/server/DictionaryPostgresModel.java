@@ -8,7 +8,6 @@ import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
 import org.topicquests.support.ResultPojo;
 import org.topicquests.support.api.IResult;
 import org.topicquests.asr.dictionary.server.api.IPostgresDictionary;
-import org.topicquests.os.asr.api.IStatisticsClient;
 
 import net.minidev.json.JSONObject;
 
@@ -19,7 +18,6 @@ import net.minidev.json.JSONObject;
 public class DictionaryPostgresModel implements IDictionaryServerModel {
 	private DictionaryServerEnvironment environment;
 	private IPostgresDictionary dictionary;
-	private IStatisticsClient stats;
 	//We reserve 0 for the quote character, taken care of at the client
 	private long nextNumber = 1;
 	private long wordCount = 1;
@@ -39,7 +37,6 @@ public class DictionaryPostgresModel implements IDictionaryServerModel {
 	public DictionaryPostgresModel(DictionaryServerEnvironment env, IPostgresDictionary d) {
 		environment = env;
 		dictionary = d;
-		stats = environment.getStats();
 		clientId = environment.getStringProperty("ClientId");
 		environment.logDebug("BootingDictionary");
 	}

@@ -222,6 +222,7 @@ public class PostgresDictionary implements IPostgresDictionary {
 	    } finally {
 	    	conn.endTransaction(r);
 	    }
+	    environment.logDebug("PostgresDictionary.getWordId "+word+" | "+result);
 	    return result;
 	}
 

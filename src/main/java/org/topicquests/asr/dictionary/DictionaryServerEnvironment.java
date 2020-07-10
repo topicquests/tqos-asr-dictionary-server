@@ -31,8 +31,9 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 		super("config-props.xml", "logger.properties");
 		stats = new StatisticsHttpClient(this);
 		String schemaName = getStringProperty("DictionaryDatabaseSchema");
-		database = new PostgresConnectionFactory(getStringProperty("DictionaryDatabaseName"),
-                schemaName);
+		String dbName = getStringProperty("DictionaryDatabaseName");
+		database = new PostgresConnectionFactory(dbName, schemaName);
+		logDebug("DictionaryServerEnvironment- "+dbName+" "+schemaName);
 		isShutDown = false;
 		pgDictionary = new PostgresDictionary(this);
 		pgModel = new DictionaryPostgresModel(this, pgDictionary);
