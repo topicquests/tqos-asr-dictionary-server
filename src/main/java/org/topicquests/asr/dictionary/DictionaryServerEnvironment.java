@@ -5,8 +5,6 @@
  */
 package org.topicquests.asr.dictionary;
 
-import org.topicquests.os.asr.StatisticsHttpClient;
-import org.topicquests.os.asr.api.IStatisticsClient;
 import org.topicquests.pg.PostgresConnectionFactory;
 import org.topicquests.asr.dictionary.server.DictionaryPostgresModel;
 import org.topicquests.asr.dictionary.server.api.IDictionaryServerModel;
@@ -23,13 +21,11 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 	private IPostgresDictionary pgDictionary;
 	private IDictionaryServerModel pgModel;
 
-	private IStatisticsClient stats;
 	/**
 	 * 
 	 */
 	public DictionaryServerEnvironment() {
 		super("config-props.xml", "logger.properties");
-		stats = new StatisticsHttpClient(this);
 		String schemaName = getStringProperty("DictionaryDatabaseSchema");
 		String dbName = getStringProperty("DictionaryDatabaseName");
 		database = new PostgresConnectionFactory(dbName, schemaName);
@@ -64,9 +60,6 @@ public class DictionaryServerEnvironment extends RootEnvironment {
 		return dictionary;
 	}*/
 	
-	public IStatisticsClient getStats() {
-		return stats;
-	}
 	
 	/*public IDictionaryServerModel getModel() {
 		logDebug("GetModel");
