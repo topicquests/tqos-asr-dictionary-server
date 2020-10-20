@@ -72,23 +72,30 @@ public class DictionaryServletHandler extends HttpServlet {
 	public void executeGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		JSONObject x = processRequest(request);
 		environment.logDebug("DSH-1 "+x);
-		IResult r = model.handleRequest(x);
-		JSONObject jo = (JSONObject)r.getResultObject();
-		//Two cases:
-		environment.logDebug("DictServer.executeGet "+jo);
-		if (jo == null) {
+		if (x == null) {
 			JSONObject msg = new JSONObject();
-			if (r.hasError()) {
-				msg.put("msg", r.getErrorString());
-				sendJSON(msg.toJSONString(), RESPONSE_BAD, response);
-			} else {
-				msg.put("msg", "ok");
-				sendJSON(msg.toJSONString(), RESPONSE_OK, response);
-			}
-			
+			msg.put("msg", "missing query");
+			sendJSON(msg.toJSONString(), RESPONSE_BAD, response);
+	
 		} else {
-			sendJSON(jo.toJSONString(), RESPONSE_OK, response);
-		} 
+			IResult r = model.handleRequest(x);
+			JSONObject jo = (JSONObject)r.getResultObject();
+			//Two cases:
+			environment.logDebug("DictServer.executeGet "+jo);
+			if (jo == null) {
+				JSONObject msg = new JSONObject();
+				if (r.hasError()) {
+					msg.put("msg", r.getErrorString());
+					sendJSON(msg.toJSONString(), RESPONSE_BAD, response);
+				} else {
+					msg.put("msg", "ok");
+					sendJSON(msg.toJSONString(), RESPONSE_OK, response);
+				}
+				
+			} else {
+				sendJSON(jo.toJSONString(), RESPONSE_OK, response);
+			} 
+		}
 	}
 
 	public void executePost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -108,9 +115,18 @@ public class DictionaryServletHandler extends HttpServlet {
     	}
     }
 	
+	/**
+	 * Can return {@code null}
+	 * @param request
+	 * @return
+	 * @throws ServletException
+	 */
 	JSONObject processRequest(HttpServletRequest request) throws ServletException {
 		JSONObject result = null;
 		String pt = getPath(request);
+		environment.logDebug("DictionaryServletHandler.processRequest "+pt);
+		if (pt == null || pt.contentEquals(""))
+			return result;
 		if (!pt.startsWith("{")) {
 			int where = pt.indexOf('/');
 			if (where > -1)  {
@@ -123,9 +139,10 @@ public class DictionaryServletHandler extends HttpServlet {
 	}
 	
 	JSONObject jsonFromString(String jsonString) throws ServletException {
-		//environment.logDebug("JSONFROMSTRING "+jsonString);
+		environment.logDebug("JSONFROMSTRING "+jsonString);
 		//NOTE: there are edge conditions:
 		//  jsonString == ""  can happen
+		environment.logDebug("DictionaryServletHandler.jsonFromString "+jsonString);
 		JSONParser p = new JSONParser(JSONParser.MODE_JSON_SIMPLE);
 		try {
 			return (JSONObject)p.parse(jsonString);
@@ -134,32 +151,34 @@ public class DictionaryServletHandler extends HttpServlet {
 			throw new ServletException(e);
 		}
 	}
+	
 	String getPath(HttpServletRequest request) throws ServletException {
-    	String path = notNullString(request.getPathInfo()).trim();
-    	Enumeration<String> ex = request.getParameterNames();
-    	if (ex != null) {
-    		List<String>l = new ArrayList<String>();
-    		while (ex.hasMoreElements())
-    			l.add(ex.nextElement());
-    	}
-    	
+    	String pi = request.getPathInfo().trim();
+    	environment.logDebug("DictionaryServletHandler.getPath "+pi);
+		String path = notNullString(pi);
+		StringBuilder buf = null;
     	try {
     		InputStream ins = request.getInputStream();
     		if (ins != null) {
-    			StringBuilder buf = new StringBuilder();
+    			buf = new StringBuilder();
     			int c;
     			while ((c = ins.read()) > -1)
     				buf.append((char)c);
-        		System.out.println(buf.toString());
+ //       		System.out.println("GP "+buf.toString());
     			
     		}
     	} catch (Exception x) {
     		environment.logError("DictionaryServletHandler.getPath booboo "+x.getMessage(), x);
     	}
-    	if (path.startsWith("/"))
-    		path = path.substring(1);
-    	if (path.endsWith("/"))
-    		path = path.substring(0,path.length()-1);
+//		System.out.println("GP-2 "+path);
+		if (buf != null)
+	    	path = buf.toString();
+		else if (!path.equals("")) {
+	    	if (path.startsWith("/"))
+	    		path = path.substring(1);
+	    	if (path.endsWith("/"))
+	    		path = path.substring(0,path.length()-1);
+	    } 
     	try {
     		path = URLDecoder.decode(path, "UTF8");
     	} catch (Exception e) {
@@ -167,7 +186,9 @@ public class DictionaryServletHandler extends HttpServlet {
     	}
     	if (path != null && path.startsWith("/"))
     		path = path.substring(1);
-    	System.out.println(path);
+ 
+	
+ //   	System.out.println("GP+ "+path);
     	return path;
     }
 	
